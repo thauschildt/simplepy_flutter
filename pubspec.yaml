@@ -1,0 +1,26 @@
+name: simplepy_flutter
+description: "With this package you can create flutter widgets based on python code."
+version: 0.0.1
+
+environment:
+  sdk: ^3.7.2
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  simplepy: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  assets:
+    - assets/python/
+
+
+
