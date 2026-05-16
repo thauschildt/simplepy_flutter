@@ -8,6 +8,8 @@
 .buildlog/
 .history
 
+/example/build/
+
 
 
 # Flutter repo-specific
