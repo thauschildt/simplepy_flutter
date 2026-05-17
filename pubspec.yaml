@@ -1,6 +1,7 @@
 name: simplepy_flutter
 description: "With this package you can create flutter widgets based on python code."
 version: 0.0.1
+repository: https://github.com/thauschildt/simplepy_flutter
 
 environment:
   sdk: ^3.7.2
