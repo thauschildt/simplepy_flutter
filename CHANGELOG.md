@@ -1,3 +1,8 @@
+## 0.0.2
+
+* Added missing type annotations.
+
+
 ## 0.0.1
 
-* TODO: Describe initial release.
+* Initial release.

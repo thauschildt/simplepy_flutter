@@ -229,7 +229,7 @@ class PyWidgetState extends State<PyWidget> {
     setState(() {});
   }
 
-  bool _replace(dict, id, widget) {
+  bool _replace(Map<String, dynamic> dict, int id, Map<String, dynamic> widget) {
     //if (dict["kwargs"]["userid"]!=null)
     //  print("check $id ${dict["id"]} ${dict["type"]} ${dict["kwargs"]["userid"]}");
     if (id<0 || dict["id"].intValue.toInt()==id) {
