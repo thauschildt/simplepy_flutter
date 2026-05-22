@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:simplepy/simplepy.dart';
@@ -263,11 +265,16 @@ class PyWidgetState extends State<PyWidget> {
   /// recursively search for id and update its property
   void _update(Map<String, dynamic> dict, int id, dynamic arg2) {
     if (dict["id"].intValue.toInt()==id) {
-      if (dict["type"]=="Text") dict["kwargs"]["data"] = arg2;
-      if (dict["type"]=="Slider") {
+      if (dict["type"]=="Text") {
+        dict["kwargs"]["data"] = arg2;
+      } else if (dict["type"]=="DropdownButton") {
+        _notifiers[id]!.value = arg2.toDouble();
+      } else if (dict["type"]=="Slider") {
         dict["kwargs"]["value"] = arg2;
         dict["kwargs"]["label"] = "$arg2";
         _notifiers[id]!.value = arg2.toDouble();
+      } else if (["Checkbox", "Switch"].contains(dict["type"])) {
+        _notifiers[id]!.value = arg2;
       }
     } else if (dict["kwargs"]["children"]!=null) {
       for (Map<String, dynamic> c in dict["kwargs"]["children"]) {
@@ -287,13 +294,13 @@ class PyWidgetState extends State<PyWidget> {
         (err) => error+="$err\n"
       ));
       if (error!="") {
-        _tree=Text(error);
+        _tree=Text(error, style: TextStyle(color: Colors.red));
       } else {
         _tree = fromDict(_dict, {});
         setState(() { },);
       }
     } catch(e) {
-      _tree = Text("$e");
+      _tree = Text("$e", style: TextStyle(color: Colors.red));
     }
   }
 
@@ -336,24 +343,53 @@ class PyWidgetState extends State<PyWidget> {
   }
 
   /// Convert serialized widget to flutter Widget
-  Widget fromDict(Map<String, dynamic> map, Map<String, Function> callbacks) {
+  Widget? fromDict(Map<String, dynamic>? map, Map<String, Function> callbacks) {
+    if (map==null) return null;
   final type = map['type'] as String;
   final kwargs = map['kwargs'] as Map<String, dynamic>;
   final id = map['id'].intValue.toInt();
   final userid = kwargs['userid'];
   if (userid!=null) user2id[userid] = id;
   
+  try {
   switch (type) {
     case 'Button':
-      PyFunction? callback = kwargs['on_pressed'] as PyFunction?;
+      PyFunction? callback = kwargs['onPressed'] as PyFunction?;
       return ElevatedButton(
         onPressed: callback!=null ? () => callback.call(_interpreter, [], {}) : null,
         child: Text(kwargs['text'] as String),
       );
 
+    case 'Card':
+      return Card(
+        elevation: kwargs["elevation"]?.toDouble(),
+        color: kwargs['color']!=null ? Color((kwargs['color'] as PyNum).intValue!.toInt()) : null,
+        shadowColor: kwargs['shadowColor']!=null ? Color((kwargs['shadowColor'] as PyNum).intValue!.toInt()) : null,
+        child: fromDict(kwargs['child'], {}),
+      );
+
     case 'Center':
       return Center(
         child: fromDict(kwargs['child'], {}),
+      );
+
+    case 'Checkbox':
+      if (_notifiers[id]==null) {
+        _notifiers[id] = ValueNotifier(kwargs['value'] || false);
+      }
+      PyFunction? callback = kwargs['onChanged'] as PyFunction?;
+      return ValueListenableBuilder(
+        valueListenable: _notifiers[id]!,
+        builder:(context, value, child) {
+          _widgets[id] = Checkbox(
+            onChanged: (bool? val) {
+              callback?.call(_interpreter, [val], {});
+              _notifiers[id]!.value = val;
+            },
+            value: value,
+          );
+          return _widgets[id]!;
+        }
       );
 
     case 'ClipRect':
@@ -370,7 +406,7 @@ class PyWidgetState extends State<PyWidget> {
     case 'Container':
       final child = fromDict(kwargs['child'], {});
       return Container(
-        color: Color((kwargs['color'] as PyNum).intValue?.toInt() ?? 0x00000000),
+        color: Color((kwargs['color'] as PyNum?)?.intValue?.toInt() ?? 0x00000000),
         child: child,
       );
 
@@ -386,6 +422,57 @@ class PyWidgetState extends State<PyWidget> {
         child: child,
       );
 
+    case 'Divider':
+      return Divider(
+        height: kwargs['height']?.toDouble(),
+        color: kwargs['color']!=null ?  Color((kwargs['color'] as PyNum).intValue!.toInt()) : null,
+        indent: kwargs['indent']?.toDouble(),
+        endIndent: kwargs['endIndent']?.toDouble(),
+        thickness: kwargs['thickness']?.toDouble(),
+      );
+
+    case 'DropdownButton':
+      PyFunction? onChanged = kwargs['onChanged'];
+      if (_notifiers[id]==null) {
+        _notifiers[id] = ValueNotifier(kwargs['value'].toDouble());
+      }
+      return ValueListenableBuilder(
+        valueListenable: _notifiers[id]!,
+        builder:(context, value, child) {
+          return DropdownButton<double>(
+            value: value,
+            items: _buildMenu(kwargs['items'], callbacks),
+            onChanged: onChanged!=null? (val) {
+              _notifiers[id]!.value = val;
+              onChanged.call(_interpreter, [val], {});
+            } : null,
+          );
+        });
+
+    case 'DropdownMenuItem':
+      return DropdownMenuItem<double>(
+        value: kwargs['value']?.toDouble(),
+        child: fromDict(kwargs['child'], {}) ?? Placeholder()
+        );
+
+    case 'Expanded':
+      final child = fromDict(kwargs['child'], {});
+      final flex = kwargs['flex']?.toInt() ?? 1;
+      return Expanded(
+        flex: flex,
+        child: child!,
+      );
+
+    case 'Flexible':
+      final child = fromDict(kwargs['child'], {});
+      final flex = kwargs['flex']?.intValue!.toInt() ?? 1;
+      final fit = kwargs['fit'];
+      return Flexible(
+        flex: flex,
+        fit: fit=="tight" ? FlexFit.tight : FlexFit.loose,
+        child: child!,
+      );
+
     case 'GridView':
       final count = kwargs['count'].intValue.toInt();
       return GridView.count(
@@ -396,10 +483,37 @@ class PyWidgetState extends State<PyWidget> {
       );
 
     case 'Image':
-      return Image.network(kwargs['url'],
-        width: kwargs['width']?.toDouble(),
-        height: kwargs['height']?.toDouble(),
-        scale: kwargs['scale']?.toDouble() ?? 1.0,
+      if (kwargs["url"] != null) {
+        var w = Image.network(kwargs['url'],
+          width: kwargs['width']?.toDouble(),
+          height: kwargs['height']?.toDouble(),
+          scale: kwargs['scale']?.toDouble() ?? 1.0,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.broken_image);
+          },
+        );
+        return w;
+      }
+      if (kwargs["base64"] != null) {
+        return Image.memory(base64Decode(kwargs['base64']),
+          width: kwargs['width']?.toDouble(),
+          height: kwargs['height']?.toDouble(),
+          scale: kwargs['scale']?.toDouble() ?? 1.0,
+        );
+      }
+      return Placeholder();
+
+    case 'Icon':
+      return Icon(IconData(
+        kwargs['codepoint']?.intValue.toInt(),
+        fontFamily: kwargs['fontFamily'] ?? "MaterialIcons",
+      ));
+
+    case 'InkWell':
+      PyFunction? onTap = kwargs['onTap'];
+      return InkWell(
+        onTap: onTap!=null? () => onTap.call(_interpreter, [], {}) : null,
+        child: fromDict(kwargs["child"], callbacks)
       );
 
     case 'Listener':
@@ -419,6 +533,35 @@ class PyWidgetState extends State<PyWidget> {
         child: fromDict(kwargs["child"], callbacks)
       );
 
+    case 'ListTile':
+      PyFunction? onTap =  kwargs['onTap'] as PyFunction?;
+      PyFunction? onLongPress =  kwargs['onLongPress'] as PyFunction?;
+      Color? textcolor, tilecolor, iconcolor;
+      if (kwargs['textColor']!=null) textcolor = Color((kwargs['textColor'] as PyNum).intValue!.toInt());
+      if (kwargs['iconColor']!=null) iconcolor = Color((kwargs['iconColor'] as PyNum).intValue!.toInt());
+      if (kwargs['tileColor']!=null) tilecolor = Color((kwargs['tileColor'] as PyNum).intValue!.toInt());
+      return ListTile(
+        onTap: onTap!=null ? () => onTap.call(_interpreter, [], {}) : null,
+        onLongPress: onLongPress!=null ? () => onLongPress.call(_interpreter, [], {}) : null,
+        contentPadding: EdgeInsets.all(4),
+        leading: kwargs['leading']!=null ? fromDict(kwargs['leading'], {}) : null,
+        trailing: kwargs['trailing']!=null ? fromDict(kwargs['trailing'], {}) : null,
+        title: kwargs['title']!=null ? fromDict(kwargs['title'], {}) : null,
+        subtitle: kwargs['subtitle']!=null ? fromDict(kwargs['subtitle'], {}) : null,
+        textColor: textcolor,
+        iconColor: iconcolor,
+        tileColor: tilecolor,
+      );
+
+    case 'ListView':
+      return ListView(children: _buildChildren(kwargs['children'], callbacks));
+
+    case 'Padding':
+      return Padding(
+        padding: EdgeInsets.all(kwargs['padding'].toDouble()),
+        child: fromDict(kwargs['child'], callbacks),
+      );
+
     case 'Positioned':
       return Positioned(
         left: (kwargs['left']?.toDouble()),
@@ -427,7 +570,7 @@ class PyWidgetState extends State<PyWidget> {
         bottom: (kwargs['bottom']?.toDouble()),
         width: (kwargs['width']?.toDouble()),
         height: (kwargs['height']?.toDouble()),
-        child: fromDict(kwargs['child'], callbacks),
+        child: fromDict(kwargs['child'], callbacks)!,
       );
 
     case 'Row':
@@ -456,7 +599,7 @@ class PyWidgetState extends State<PyWidget> {
       );
 
     case 'Slider':
-      PyFunction? callback = kwargs['on_changed'] as PyFunction?;
+      PyFunction? callback = kwargs['onChanged'] as PyFunction?;
       if (_notifiers[id]==null) {
         _notifiers[id] = ValueNotifier(kwargs['value'].toDouble());
       }
@@ -488,6 +631,25 @@ class PyWidgetState extends State<PyWidget> {
         children: children,
       );
 
+    case 'Switch':
+      if (_notifiers[id]==null) {
+        _notifiers[id] = ValueNotifier(kwargs['value'] || false);
+      }
+      PyFunction? callback = kwargs['onChanged'] as PyFunction?;
+      return ValueListenableBuilder(
+        valueListenable: _notifiers[id]!,
+        builder:(context, value, child) {
+          _widgets[id] = Switch(
+            onChanged: (bool? val) {
+              callback?.call(_interpreter, [val], {});
+              _notifiers[id]!.value = val;
+            },
+            value: value,
+          );
+          return _widgets[id]!;
+        }
+      );
+
     case 'Text':
       var style = kwargs['style'];
       if (style!=null) style = getTextStyle(kwargs['style']);
@@ -498,8 +660,23 @@ class PyWidgetState extends State<PyWidget> {
       int? rows = kwargs["rows"].intValue.toInt();
       return TextField(minLines: rows, maxLines: null, controller: _textControllers[id]);
 
+    case 'Tooltip':
+        final child = fromDict(kwargs['child'], {});
+        return Tooltip(
+          message: kwargs['message'],
+          child: child,
+        );
+
+    case 'Wrap':
+        return Wrap(
+          children: _buildChildren(kwargs['children'], callbacks),
+        );
+
     default:
       return const SizedBox();
+  }
+  } catch(e) {
+    return Text("Error creating $type ($kwargs):\n$e", style: TextStyle(color: Colors.red));
   }
 
 }
@@ -507,8 +684,15 @@ class PyWidgetState extends State<PyWidget> {
   List<Widget> _buildChildren(dynamic children, Map<String, Function> callbacks) {
     if (children == null) return [];
     return (children as List)
-        .map((c) => fromDict(_castMap(c), callbacks))
+        .map((c) => fromDict(_castMap(c), callbacks)!)
         .toList();
+  }
+
+  List<DropdownMenuItem<double>> _buildMenu(dynamic items, Map<String, Function> callbacks) {
+    if (items == null) return [];
+    return (items as List)
+        .map((c) => fromDict(_castMap(c), callbacks)!)
+        .toList().cast<DropdownMenuItem<double>>();
   }
 
 }
@@ -522,6 +706,7 @@ class PyWidgetState extends State<PyWidget> {
 /// - `PyList` → `List<dynamic>`
 /// - `Map<Object?, Object?>` → `Map<String, dynamic>`
 Map<String, dynamic> _castMap(Object? value) {
+  if (value == null) return {};
   final map = value as Map<Object?, Object?>;
   return map.map((k, v) {
     if (v is Map<Object?, Object?>) {

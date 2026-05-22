@@ -19,12 +19,12 @@ This module is loaded automatically by the Flutter package and serves as the
 base environment for user-defined Python UI code.
 
 Currently supported widgets include:
-- Layout: Column, Row, GridView, Stack, Center, SizedBox, Positioned, ScrollView
-- Input: TextField, Slider, Button
-- Display: Text, Image, RichText
-- Interaction: Listener
+- Layout: Column, Row, Wrap, Divider, Expanded, Flexible, Padding, GridView, ListView, ListTile, Stack, Center, SizedBox, Positioned, ScrollView
+- Input: TextField, Slider, Button, Checkbox, Switch, DropdownButton/DropdownMenuItem
+- Display: Text, Image, RichText, Icon
+- Interaction: InkWell, Listener
 - Graphics: CustomPaint
-- Misc: Container, ClipRect
+- Misc: Container, ClipRect, Tooltip
 """
 
 _id_counter = 0
@@ -46,10 +46,10 @@ class Widget:
 
 # Button
 class Button(Widget):
-    def __init__(self, text, on_pressed=None, id=None):
+    def __init__(self, text, onPressed=None, id=None):
         super().__init__(id)
         self.text = text
-        self.on_pressed = on_pressed
+        self.onPressed = onPressed
 
     def to_dict(self):
         return {
@@ -58,7 +58,29 @@ class Button(Widget):
             "kwargs": {
                 "userid": self.userid,
                 "text": self.text,
-                "on_pressed": self.on_pressed
+                "onPressed": self.onPressed
+            }
+        }
+    
+# Card
+class Card(Widget):
+    def __init__(self, child, color=None, shadowColor=None, elevation=None, id=None):
+        super().__init__(id)
+        self.child = child
+        self.color = color
+        self.shadowColor = shadowColor
+        self.elevation = elevation
+
+    def to_dict(self):
+        return {
+            "type": "Card",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": self.child.to_dict(),
+                "color": self.color,
+                "shadowColor": self.shadowColor,
+                "elevation": self.elevation
             }
         }
 
@@ -74,6 +96,24 @@ class Center(Widget):
             "id": self.id,
             "kwargs": {
                 "child": self.child.to_dict()
+            }
+        }
+
+# Checkbox
+class Checkbox(Widget):
+    def __init__(self, value = False, onChanged=None, id=None):
+        super().__init__(id)
+        self.value = value
+        self.onChanged = onChanged
+
+    def to_dict(self):
+        return {
+            "type": "Checkbox",
+            "id": self.id,
+            "kwargs": {
+                "value": self.value,
+                "onChanged": self.onChanged,
+                "userid": self.userid
             }
         }
 
@@ -158,7 +198,114 @@ class CustomPaint(Widget):
                 "height": self.height
             }
         }
+    
+# Divider
+class Divider(Widget):
+    def __init__(self, height=None, color=None, thickness=None, indent=None, endIndent=None, id=None):
+        super().__init__(id)
+        self.height = height
+        self.color = color
+        self.thickness = thickness
+        self.indent = indent
+        self.endIndent = endIndent
 
+    def to_dict(self):
+        return {
+            "type": "Divider",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "height": self.height,
+                "color": self.color,
+                "thickness": self.thickness,
+                "indent": self.indent,
+                "endIndent": self.endIndent
+            }
+        }
+    
+# DropdownButton
+class DropdownButton(Widget):
+    def __init__(self, value = None, items=None, onChanged=None, id=None):
+        super().__init__(id)
+        self.items = items or []
+        self.onChanged = onChanged
+        self.value = value
+
+    def to_dict(self):
+        return {
+            "type": "DropdownButton",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "items": [c.to_dict() for c in self.items],
+                "value": self.value,
+                "onChanged": self.onChanged
+            }
+        }
+
+# DropdownMenuItem
+class DropdownMenuItem(Widget):
+    def __init__(self, child = None, value = None, id=None):
+        super().__init__(id)
+        self.child = child or []
+        self.value = value
+
+    def to_dict(self):
+        return {
+            "type": "DropdownMenuItem",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": self.child.to_dict(),
+                "value": self.value
+            }
+        }
+
+
+# Expanded
+class Expanded(Widget):
+    def __init__(self, child=None, flex=None, id=None):
+        super().__init__(id)
+        self.child = child
+        self.flex = flex
+
+    def to_dict(self):
+        c=None
+        if self.child: c=self.child.to_dict()
+        return {
+            "type": "Expanded",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": c,
+                "flex": self.flex
+            }
+        }
+    
+
+# Flexible
+class Flexible(Widget):
+    def __init__(self, child=None, flex=None, fit=None, id=None):
+        super().__init__(id)
+        self.child = child
+        self.flex = flex
+        self.fit = fit
+
+    def to_dict(self):
+        c=None
+        if self.child: c=self.child.to_dict()
+        print("child: ",c)
+        return {
+            "type": "Flexible",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": c,
+                "flex": self.flex,
+                "fit": self.fit
+            }
+        }
+    
 # GridView
 class GridView(Widget):
     def __init__(self, children, count, id=None):
@@ -177,12 +324,33 @@ class GridView(Widget):
             }
         }
 
+# Icon
+# codepoint is the unicode value: https://api.flutter.dev/flutter/material/Icons-class.html
+class Icon(Widget):
+    def __init__(self, codePoint, fontFamily=None, id=None):
+        super().__init__(id)
+        self.codePoint=codePoint
+        self.fontFamily=fontFamily
+
+    def to_dict(self):
+        return {
+            "type": "Icon",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "codePoint": self.codePoint,
+                "fontFamily": self.fontFamily
+            }
+        }
 
 # Image
 class Image(Widget):
-    def __init__(self, url, id=None, width=None, height=None, opacity=None, scale=None):
+    def __init__(self, url=None, base64=None, id=None, width=None, height=None, opacity=None, scale=None):
         super().__init__(id)
+        if url!=None and base64!=None:
+            raise Exception("Image: You cannot specify both url and base64")
         self.url=url
+        self.base64=base64
         self.scale=scale
         self.width=width
         self.height=height
@@ -195,10 +363,29 @@ class Image(Widget):
             "kwargs": {
                 "userid": self.userid,
                 "url": self.url,
+                "base64": self.base64,
                 "width": self.width,
                 "height": self.height,
                 "scale": self.scale,
                 "opacity": self.opacity
+            }
+        }
+    
+# InkWell
+class InkWell(Widget):
+    def __init__(self, child, onTap=None, id=None):
+        super().__init__(id)
+        self.child = child
+        self.onTap = onTap
+
+    def to_dict(self):
+        return {
+            "type": "InkWell",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": self.child.to_dict(),
+                 "onTap": self.onTap
             }
         }
 
@@ -224,6 +411,81 @@ class Listener(Widget):
                  "onPointerUp": self.onPointerUp,
                  "onPointerMove": self.onPointerMove,
                  "onPointerHover": self.onPointerHover
+            }
+        }
+    
+# ListTile
+class ListTile(Widget):
+    def __init__(self, children=[],  title="", subtitle=None, leading=None, trailing=None,
+                 textColor = None, iconColor = None, tileColor = None,
+                 onTap = None, onLongPress = None, id=None):
+        super().__init__(id)
+        self.children=children
+        self.title=title
+        self.subtitle=subtitle
+        self.leading=leading
+        self.trailing=trailing
+        self.textColor=textColor
+        self.iconColor=iconColor
+        self.tileColor=tileColor
+        self.onTap=onTap
+        self.onLongPress=onLongPress
+    def to_dict(self):
+        leading = None
+        if self.leading: leading = self.leading.to_dict()
+        trailing = None
+        if self.trailing: trailing = self.trailing.to_dict()
+        title = None
+        if self.title: title = self.title.to_dict()
+        subtitle = None
+        if self.subtitle: subtitle = self.subtitle.to_dict()
+        return {
+            "type": "ListTile",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "title": title,
+                "subtitle": subtitle,
+                "leading": leading,
+                "trailing": trailing,
+                "textColor": self.textColor,
+                "iconColor": self.iconColor,
+                "tileColor": self.tileColor,
+                "onTap": self.onTap,
+                "onLongPress": self.onLongPress
+            }
+        }
+    
+# ListView
+class ListView(Widget):
+    def __init__(self, children=[],  id=None):
+        super().__init__(id)
+        self.children=children
+    def to_dict(self):
+        return {
+            "type": "ListView",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "children": [c.to_dict() for c in self.children]
+            }
+        }
+    
+# Padding
+class Padding(Widget):
+    def __init__(self, child, padding=0.0, id=None):
+        super().__init__(id)
+        self.child = child
+        self.padding = padding
+    
+    def to_dict(self):
+        return {
+            "type": "Padding",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "child": self.child.to_dict(),
+                "padding": self.padding
             }
         }
     
@@ -274,10 +536,10 @@ class Row(Widget):
 
 # Slider
 class Slider(Widget):
-    def __init__(self, value=0.0, on_changed=None, min=0.0, max=1.0, divisions = None, id=None):
+    def __init__(self, value=0.0, onChanged=None, min=0.0, max=1.0, divisions = None, id=None):
         super().__init__(id)
         self.value = value
-        self.on_changed = on_changed
+        self.onChanged = onChanged
         self.min = min
         self.max = max
         self.divisions = divisions
@@ -292,7 +554,7 @@ class Slider(Widget):
                 "min": self.min,
                 "max": self.max,
                 "divisions": self.divisions,
-                "on_changed": self.on_changed
+                "onChanged": self.onChanged
             }
         }
 
@@ -352,6 +614,25 @@ class Stack(Widget):
                 "clipBehavior": self.clipBehavior
             }
         }
+    
+# Switch
+class Switch(Widget):
+    def __init__(self, value = False, onChanged=None, id=None):
+        super().__init__(id)
+        self.value = value
+        self.onChanged = onChanged
+
+    def to_dict(self):
+        return {
+            "type": "Switch",
+            "id": self.id,
+            "kwargs": {
+                "value": self.value,
+                "onChanged": self.onChanged,
+                "userid": self.userid
+            }
+        }
+
 
 # Text
 class Text(Widget):
@@ -394,9 +675,9 @@ class TextField(Widget):
 
 # TextStyle
 class TextStyle(Widget):
-    def __init__(self, font_size=None, color=None, bold=False):
+    def __init__(self, fontSize=None, color=None, bold=False):
         super().__init__()
-        self.font_size = font_size
+        self.fontSize = fontSize
         self.color = color
         self.bold = bold
 
@@ -405,7 +686,7 @@ class TextStyle(Widget):
             "type": "TextStyle",
             "id": self.id,
             "kwargs": {
-                "font_size": self.font_size,
+                "fontSize": self.fontSize,
                 "color": self.color,
                 "bold": self.bold
             }
@@ -428,6 +709,40 @@ class RichText(Widget):
                 "userid": self.userid,
                 "text": self.text,
                 "style": s
+            }
+        }
+    
+# Tooltip
+class Tooltip(Widget):
+    def __init__(self, child=None, message="", id=None):
+        super().__init__(id)
+        self.child = child or []
+        self.message = message or []
+
+    def to_dict(self):
+        return {
+            "type": "Tooltip",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "message": self.message,
+                "child": self.child.to_dict()
+            }
+        }
+    
+# Wrap
+class Wrap(Widget):
+    def __init__(self, children=None, id=None):
+        super().__init__(id)
+        self.children = children or []
+
+    def to_dict(self):
+        return {
+            "type": "Wrap",
+            "id": self.id,
+            "kwargs": {
+                "userid": self.userid,
+                "children": [c.to_dict() for c in self.children]
             }
         }
     
