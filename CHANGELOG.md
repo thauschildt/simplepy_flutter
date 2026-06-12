@@ -1,3 +1,7 @@
+## 0.1.2
+* avoid non-const IconData
+
+
 ## 0.1.1
 * correct Button parameter name in test
 

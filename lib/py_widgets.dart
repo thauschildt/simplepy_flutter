@@ -505,10 +505,17 @@ class PyWidgetState extends State<PyWidget> {
       return Placeholder();
 
     case 'Icon':
-      return Icon(IconData(
-        kwargs['codePoint']?.intValue.toInt(),
-        fontFamily: kwargs['fontFamily'] ?? "MaterialIcons",
-      ));
+      final int? codePoint = kwargs['codePoint']?.intValue?.toInt();
+      final String fontFamily =
+          kwargs['fontFamily'] as String? ?? 'MaterialIcons';
+      if (codePoint == null) {
+        return const Icon(Icons.help_outline);
+      }
+      final iconData = IconData(
+        codePoint,
+        fontFamily: fontFamily,
+      );
+      return Icon(iconData);
 
     case 'InkWell':
       PyFunction? onTap = kwargs['onTap'];
