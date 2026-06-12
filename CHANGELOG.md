@@ -1,3 +1,6 @@
+## 0.1.1
+* correct Button parameter name in test
+
 ## 0.1.0
 
 * Added 'Url' widget
