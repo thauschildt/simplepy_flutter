@@ -6,7 +6,7 @@ import 'package:simplepy_flutter/simplepy_flutter.dart';
 void main() {
 
 
-  testWidgets('pywidget button with on_pressed', (WidgetTester tester) async {
+  testWidgets('pywidget button with onPressed', (WidgetTester tester) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -19,7 +19,7 @@ def pressed():
 
 def build():
   return Column(children=[
-    Button("CLICK", on_pressed = pressed),
+    Button("CLICK", onPressed = pressed),
     Text(f"x={x}", id="text")
   ])
 """, key: ValueKey(1)),
