@@ -6,7 +6,13 @@ It connects the **SimplePy runtime** with Flutter and translates Python-defined 
 
 - Build Flutter UI using Python code
 - Dynamic widget tree updates at runtime
-- Support for common Flutter widgets (Text, Column, Row, Container, SizedBox, GridView, Stack, Positioned etc.)
+- Support for common Flutter widgets:
+  - Layout: Column, Row, Wrap, Divider, Expanded, Flexible, Padding, GridView, ListView, ListTile, Stack, Center, SizedBox, Positioned, SingleChildScrollView
+  - Input: TextField, Slider, Button, Checkbox, Switch, DropdownButton/DropdownMenuItem
+  - Display: Text, Image, RichText, Icon, Tooltip
+  - Interaction: InkWell, Listener
+  - Graphics: CustomPaint
+- Misc: Container, ClipRect
 - Canvas drawing API from Python (CustomPaint widget)
 - Interactive widgets (Slider, TextField, Button, Image[from url], ...)
 

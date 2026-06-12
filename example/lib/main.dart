@@ -42,9 +42,9 @@ def button():
   
 def build():
   return Column(children=[
-    Button(text='Increment Counter', on_pressed=button),
+    Button(text='Increment Counter', onPressed=button),
     Text(f"Counter = {counter}", id="counter",
-      style=TextStyle(color=0xff00aaff, font_size=42))
+      style=TextStyle(color=0xff00aaff, fontSize=42))
   ])
 """;
     pywidget =  PyWidget(key: key, _ctrl.text);

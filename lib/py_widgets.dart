@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:simplepy/simplepy.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'py_painter.dart';
 
 /// A Flutter widget that renders UI defined by Python code.
@@ -345,13 +346,13 @@ class PyWidgetState extends State<PyWidget> {
   /// Convert serialized widget to flutter Widget
   Widget? fromDict(Map<String, dynamic>? map, Map<String, Function> callbacks) {
     if (map==null) return null;
-  final type = map['type'] as String;
-  final kwargs = map['kwargs'] as Map<String, dynamic>;
-  final id = map['id'].intValue.toInt();
-  final userid = kwargs['userid'];
-  if (userid!=null) user2id[userid] = id;
-  
-  try {
+    final type = map['type'] as String;
+    final kwargs = map['kwargs'] as Map<String, dynamic>;
+    final id = map['id'].intValue.toInt();
+    final userid = kwargs['userid'];
+    if (userid!=null) user2id[userid] = id;
+    
+    try {
   switch (type) {
     case 'Button':
       PyFunction? callback = kwargs['onPressed'] as PyFunction?;
@@ -505,7 +506,7 @@ class PyWidgetState extends State<PyWidget> {
 
     case 'Icon':
       return Icon(IconData(
-        kwargs['codepoint']?.intValue.toInt(),
+        kwargs['codePoint']?.intValue.toInt(),
         fontFamily: kwargs['fontFamily'] ?? "MaterialIcons",
       ));
 
@@ -671,15 +672,41 @@ class PyWidgetState extends State<PyWidget> {
         return Wrap(
           children: _buildChildren(kwargs['children'], callbacks),
         );
-
+    // Widgets from additional packages:
+    case 'Url':
+        var label =  kwargs['label'] ?? kwargs["url"];
+        if (label is String) {
+          label = Text(label);
+        } else {
+          label = fromDict(label, {});
+        }
+        var button = ElevatedButton(
+            onPressed: _launchUrl(kwargs['url']),
+            child: label,
+          );
+        return kwargs['label']!=null? Tooltip(
+          message: kwargs['url'],
+          child: button
+        ) : button;
     default:
       return const SizedBox();
-  }
-  } catch(e) {
-    return Text("Error creating $type ($kwargs):\n$e", style: TextStyle(color: Colors.red));
+      }
+    } catch(e) {
+      return Text("Error creating $type ($kwargs):\n$e", style: TextStyle(color: Colors.red));
+    }
   }
 
-}
+  void Function() _launchUrl(String url) {
+    return () async {
+      if (!await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.inAppBrowserView,
+      )) {
+        throw Exception('Could not launch $url');
+      }
+    };
+  }
+
 
   List<Widget> _buildChildren(dynamic children, Map<String, Function> callbacks) {
     if (children == null) return [];

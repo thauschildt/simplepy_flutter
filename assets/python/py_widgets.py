@@ -19,12 +19,12 @@ This module is loaded automatically by the Flutter package and serves as the
 base environment for user-defined Python UI code.
 
 Currently supported widgets include:
-- Layout: Column, Row, Wrap, Divider, Expanded, Flexible, Padding, GridView, ListView, ListTile, Stack, Center, SizedBox, Positioned, ScrollView
+- Layout: Column, Row, Wrap, Divider, Expanded, Flexible, Padding, GridView, ListView, ListTile, Stack, Center, SizedBox, Positioned, SingleChildScrollView
 - Input: TextField, Slider, Button, Checkbox, Switch, DropdownButton/DropdownMenuItem
-- Display: Text, Image, RichText, Icon
-- Interaction: InkWell, Listener
+- Display: Text, Image, RichText, Icon, Tooltip
+- Interaction: InkWell, Listener, Url
 - Graphics: CustomPaint
-- Misc: Container, ClipRect, Tooltip
+- Misc: Container, ClipRect
 """
 
 _id_counter = 0
@@ -746,3 +746,23 @@ class Wrap(Widget):
             }
         }
     
+######### Widgets from additional packages #############
+
+# Url
+class Url(Widget):
+    def __init__(self, url, label=None, id=None):
+        super().__init__(id)
+        self.url = url
+        self.label = label
+
+    def to_dict(self):
+        label = self.label
+        if isinstance(label, Widget): label=label.to_dict()
+        return {
+            "type": "Url",
+            "id": self.id,
+            "kwargs": {
+                "url": self.url,
+                "label": label
+            }
+        }
